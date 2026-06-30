@@ -130,6 +130,23 @@ body{font-family:-apple-system,sans-serif;background:#111;color:#f0f0ec;padding-
 .lift-empty-state svg{margin-bottom:10px;opacity:.4}
 .lift-empty-state-text{font-size:13px;font-weight:600;color:#999}
 .lift-empty-state-sub{font-size:12px;color:#666}
+.drill-tpl-manage{display:flex;justify-content:flex-end;margin-bottom:10px}
+.drill-tpl-manage-btn{font-size:11px;font-weight:700;color:#5fa0e8;background:none;border:1px solid #1a3050;border-radius:99px;padding:5px 12px;cursor:pointer}
+.mob-pick-btn.custom{position:relative;padding-right:28px}
+.mob-pick-edit{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.12);color:inherit;font-size:10px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.drill-row{display:flex;gap:7px;margin-bottom:8px;align-items:flex-start}
+.drill-row input{font-size:13px;font-weight:600;padding:7px 8px;border:1px solid #3a3a38;border-radius:7px;background:#222;color:#f0f0ec}
+.drill-row .drill-name{flex:2}
+.drill-row .drill-sets{flex:1}
+.drill-row .drill-note{flex:2.5}
+.drill-row .drill-del{flex-shrink:0;width:34px;font-size:14px;color:#e08080;background:none;border:1px solid #3a2a2a;border-radius:7px;cursor:pointer;height:34px}
+.drill-list-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #2a2a28}
+.drill-list-row:last-child{border-bottom:none}
+.drill-list-name{font-size:14px;font-weight:600;color:#f0f0ec}
+.drill-list-sub{font-size:11px;color:#777;margin-top:1px}
+.drill-list-actions{display:flex;gap:6px;flex-shrink:0}
+.drill-list-btn{font-size:11px;font-weight:700;color:#bbb;background:none;border:1px solid #3a3a38;border-radius:7px;padding:5px 10px;cursor:pointer}
+.drill-list-btn.danger{color:#e08080;border-color:#4a2a2a}
 .lift-pr-banner{background:linear-gradient(135deg,#2a2208,#1c1c1a);border:1px solid #4a3c10;border-radius:10px;padding:9px 12px;margin-top:10px;display:flex;align-items:center;gap:8px;font-size:12px;color:#f5cc60;font-weight:700}
 .lift-quick-add-form{display:none;margin-top:12px;padding-top:12px;border-top:1px dashed #3a3a38}
 .lift-quick-add-form.open{display:block}
@@ -294,7 +311,10 @@ body{font-family:-apple-system,sans-serif;background:#111;color:#f0f0ec;padding-
 <div class="vtabs">
 <button class="vt on" id="vt-s" onclick="sv('s')">Schedule</button>
 <button class="vt" id="vt-tpl" onclick="sv('tpl')">Lifts</button>
+<button class="vt" id="vt-vol" onclick="sv('vol')">Volume</button>
 <button class="vt" id="vt-m" onclick="sv('m')">Mobility</button>
+<button class="vt" id="vt-prep" onclick="sv('prep')">Mvmt Prep</button>
+<button class="vt" id="vt-hit" onclick="sv('hit')">Hitting</button>
 <button class="vt" id="vt-meal" onclick="sv('meal')">Meals</button>
 <button class="vt" id="vt-w" onclick="sv('w')">Weight log</button>
 <button class="vt" id="vt-e" onclick="sv('e')">Exit velo</button>
@@ -576,6 +596,100 @@ function rs(){
     }
   }
   if(w.tip)h+='<div class="tip"><div class="tipl">Coach\'s note</div><div class="tipt">'+w.tip+'</div></div>';
+  document.getElementById('pg').innerHTML=h;
+}
+
+/* ── MOVEMENT PREP ── */
+var PREPSEL=g('prep_sel')||null;
+function prepPick(sel){
+  PREPSEL=sel;
+  s('prep_sel',sel);
+  rprep();
+}
+function rprep(){
+  var customs=getDrillTemplates('prep');
+  var h='<div style="font-size:13px;color:#555;margin-bottom:13px;line-height:1.6">Build your own movement prep templates — whatever you actually do before practice or a lift.</div>';
+  h+='<div class="drill-tpl-manage"><button class="drill-tpl-manage-btn" onclick="drillModalOpen(\'prep\')">'+(customs.length?'Manage my templates':'+ Create your own template')+'</button></div>';
+
+  if(!customs.length){
+    h+='<div class="lift-empty-state">';
+    h+='<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>';
+    h+='<div class="lift-empty-state-text">No templates yet</div>';
+    h+='<div class="lift-empty-state-sub">Tap "Create your own template" above to build your first one</div>';
+    h+='</div>';
+    document.getElementById('pg').innerHTML=h;
+    return;
+  }
+
+  if(!PREPSEL||!customs.find(function(t){return 'custom:'+t.id===PREPSEL;})){
+    PREPSEL='custom:'+customs[0].id;
+    s('prep_sel',PREPSEL);
+  }
+
+  h+='<div class="mob-picker">';
+  customs.forEach(function(t){
+    var selId='custom:'+t.id;
+    var sel=selId===PREPSEL;
+    h+='<button class="mob-pick-btn custom'+(sel?' sel':'')+'" style="'+(sel?'background:#1a2535;color:#9fd0ff;border-color:#1a5fa8':'')+'" onclick="prepPick(\''+selId+'\')">'+t.name+'</button>';
+  });
+  h+='</div>';
+
+  var tid=PREPSEL.slice(7);
+  var tpl=customs.find(function(t){return t.id===tid;});
+  h+='<div class="dc"><span class="mcat" style="background:#1a2535;color:#9fd0ff">'+tpl.name+'</span>';
+  tpl.drills.forEach(function(m,i){
+    if(i)h+='<div style="border-top:1px solid #262624;margin:4px 0"></div>';
+    h+='<div class="er"><div><div class="en">'+m.n+'</div>'+(m.note?'<div class="enote">'+m.note+'</div>':'')+'</div><div class="es">'+m.s+'</div></div>';
+  });
+  h+='</div>';
+
+  document.getElementById('pg').innerHTML=h;
+}
+
+/* ── HITTING ── */
+var HITSEL=g('hit_sel')||null;
+function hitPick(sel){
+  HITSEL=sel;
+  s('hit_sel',sel);
+  rhit();
+}
+function rhit(){
+  var customs=getDrillTemplates('hit');
+  var h='<div style="font-size:13px;color:#555;margin-bottom:13px;line-height:1.6">Build your own hitting templates — whatever drills you actually run that day.</div>';
+  h+='<div class="drill-tpl-manage"><button class="drill-tpl-manage-btn" onclick="drillModalOpen(\'hit\')">'+(customs.length?'Manage my templates':'+ Create your own template')+'</button></div>';
+
+  if(!customs.length){
+    h+='<div class="lift-empty-state">';
+    h+='<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 3"/></svg>';
+    h+='<div class="lift-empty-state-text">No templates yet</div>';
+    h+='<div class="lift-empty-state-sub">Tap "Create your own template" above to build your first one</div>';
+    h+='</div>';
+    document.getElementById('pg').innerHTML=h;
+    return;
+  }
+
+  if(!HITSEL||!customs.find(function(t){return 'custom:'+t.id===HITSEL;})){
+    HITSEL='custom:'+customs[0].id;
+    s('hit_sel',HITSEL);
+  }
+
+  h+='<div class="mob-picker">';
+  customs.forEach(function(t){
+    var selId='custom:'+t.id;
+    var sel=selId===HITSEL;
+    h+='<button class="mob-pick-btn custom'+(sel?' sel':'')+'" style="'+(sel?'background:#1a2535;color:#9fd0ff;border-color:#1a5fa8':'')+'" onclick="hitPick(\''+selId+'\')">'+t.name+'</button>';
+  });
+  h+='</div>';
+
+  var tid=HITSEL.slice(7);
+  var tpl=customs.find(function(t){return t.id===tid;});
+  h+='<div class="dc"><span class="mcat" style="background:#1a2535;color:#9fd0ff">'+tpl.name+'</span>';
+  tpl.drills.forEach(function(m,i){
+    if(i)h+='<div style="border-top:1px solid #262624;margin:4px 0"></div>';
+    h+='<div class="er"><div><div class="en">'+m.n+'</div>'+(m.note?'<div class="enote">'+m.note+'</div>':'')+'</div><div class="es">'+m.s+'</div></div>';
+  });
+  h+='</div>';
+
   document.getElementById('pg').innerHTML=h;
 }
 var MOBSEL=g('mob_sel')||'hip';
@@ -1390,6 +1504,258 @@ function mealQuickAddToFirst(idx){
   rmeal();
 }
 
+/* ── VOLUME TRACKING ── */
+function isoWeekKey(ts){
+  var d=new Date(ts);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate()+3-((d.getDay()+6)%7));
+  var week1=new Date(d.getFullYear(),0,4);
+  var weekNum=1+Math.round(((d-week1)/86400000-3+((week1.getDay()+6)%7))/7);
+  return d.getFullYear()+'-W'+(weekNum<10?'0':'')+weekNum;
+}
+function weekKeyLabel(key){
+  var parts=key.split('-W');
+  var year=parseInt(parts[0]),week=parseInt(parts[1]);
+  var jan4=new Date(year,0,4);
+  var weekStart=new Date(jan4);
+  weekStart.setDate(jan4.getDate()-((jan4.getDay()+6)%7)+(week-1)*7);
+  return (weekStart.getMonth()+1)+'/'+weekStart.getDate();
+}
+function currentWeekKey(){return isoWeekKey(Date.now());}
+
+function computeAllVolumeByWeek(){
+  var lifts=getLifts();
+  var byWeek={};
+  lifts.forEach(function(lift){
+    var entries=getLiftEntries(lift.id);
+    entries.forEach(function(e){
+      var vol=(e.w||0)*(e.r||0)*(e.sets||1);
+      var wk=isoWeekKey(e.ts);
+      if(!byWeek[wk])byWeek[wk]={total:0,byCat:{}};
+      byWeek[wk].total+=vol;
+      var cat=lift.cat||'other';
+      byWeek[wk].byCat[cat]=(byWeek[wk].byCat[cat]||0)+vol;
+    });
+  });
+  return byWeek;
+}
+
+function getVolumeGoal(){
+  var v=g('vol_goal');
+  return v?parseFloat(v):null;
+}
+function saveVolumeGoal(){
+  var val=parseFloat(document.getElementById('vol-goal-input').value);
+  if(val>0)s('vol_goal',val);else s('vol_goal','');
+  rvol();
+}
+
+function rvol(){
+  var byWeek=computeAllVolumeByWeek();
+  var weekKeys=Object.keys(byWeek).sort();
+  var curKey=currentWeekKey();
+  var goal=getVolumeGoal();
+
+  var h='<div class="lift-intro">Total volume is weight × reps × sets, summed across every lift you log. It rolls up automatically by week — no extra logging needed, this reads straight from your Lifts history.</div>';
+
+  var curVol=byWeek[curKey]?byWeek[curKey].total:0;
+  h+='<div class="ev-summary" style="margin-bottom:14px">';
+  h+='<h3 style="margin-bottom:4px">This week</h3>';
+  h+='<div style="font-size:32px;font-weight:800;color:#5fa0e8;line-height:1.1">'+Math.round(curVol).toLocaleString()+'</div>';
+  h+='<div style="font-size:11px;color:#888;margin-top:2px">lb total volume</div>';
+  if(goal){
+    var pct=Math.min(100,Math.round((curVol/goal)*100));
+    h+='<div style="margin-top:10px"><div class="meal-macro-track"><div class="meal-macro-fill" style="width:'+pct+'%;background:#5fa0e8"></div></div>';
+    h+='<div style="font-size:11px;color:#888;margin-top:4px">'+pct+'% of '+goal.toLocaleString()+' lb weekly goal</div></div>';
+  }
+  h+='</div>';
+
+  if(weekKeys.length>0){
+    var maxVol=Math.max.apply(null,weekKeys.map(function(k){return byWeek[k].total;}));
+    var recentKeys=weekKeys.slice(-8);
+    h+='<div class="wlcard">';
+    h+='<h3>Weekly volume trend</h3>';
+    h+='<p>Last '+recentKeys.length+' week'+(recentKeys.length===1?'':'s')+' with logged lifts</p>';
+    h+='<div class="cbars">';
+    recentKeys.forEach(function(k){
+      var val=byWeek[k].total;
+      var bh=maxVol>0?Math.max(4,Math.round((val/maxVol)*56)+8):4;
+      var isCur=k===curKey;
+      h+='<div class="cb'+(isCur?' hd2':'')+'" style="height:'+bh+'px'+(isCur?'':';background:#2a4a70')+'" title="'+Math.round(val).toLocaleString()+' lb"></div>';
+    });
+    h+='</div><div class="cxl-row">';
+    recentKeys.forEach(function(k){h+='<div class="cxl">'+weekKeyLabel(k)+'</div>';});
+    h+='</div></div>';
+
+    if(weekKeys.length>=2){
+      var lastKey=weekKeys[weekKeys.length-2];
+      var lastVol=byWeek[lastKey].total;
+      var diff=curVol-lastVol;
+      var diffPct=lastVol>0?Math.round((diff/lastVol)*100):0;
+      h+='<div class="lift-pr-banner" style="background:'+(diff>=0?'linear-gradient(135deg,#0e2a14,#1c1c1a)':'linear-gradient(135deg,#2a1414,#1c1c1a)')+';border-color:'+(diff>=0?'#1e4a28':'#4a2020')+';color:'+(diff>=0?'#7ed99a':'#e08080')+'">';
+      h+=(diff>=0?'📈 ':'📉 ')+(diff>=0?'+':'')+Math.round(diff).toLocaleString()+' lb vs last week ('+(diffPct>=0?'+':'')+diffPct+'%)';
+      h+='</div>';
+    }
+  } else {
+    h+='<div class="lift-empty-state">';
+    h+='<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17h4v4H3zM10 12h4v9h-4zM17 7h4v14h-4z"/></svg>';
+    h+='<div class="lift-empty-state-text">No volume logged yet</div>';
+    h+='<div class="lift-empty-state-sub">Log entries under any lift in the Lifts tab and they\'ll show up here automatically</div>';
+    h+='</div>';
+  }
+
+  if(weekKeys.length>0){
+    var curBreakdown=byWeek[curKey]?byWeek[curKey].byCat:{};
+    var catKeys=Object.keys(curBreakdown);
+    if(catKeys.length>0){
+      h+='<div class="wlcard">';
+      h+='<h3>This week by category</h3><div style="margin-top:8px">';
+      catKeys.sort(function(a,b){return curBreakdown[b]-curBreakdown[a];}).forEach(function(catId,i){
+        var cat=liftGetCat(catId);
+        var val=curBreakdown[catId];
+        var pct=curVol>0?Math.round((val/curVol)*100):0;
+        if(i>0)h+='<div style="border-top:1px solid #262624;margin:6px 0"></div>';
+        h+='<div class="ex-row" style="padding:5px 0"><div><span class="lift-card-cat" style="background:'+cat.bg+';color:'+cat.tc+'">'+cat.l+'</span></div>';
+        h+='<div class="es">'+Math.round(val).toLocaleString()+' lb · '+pct+'%</div></div>';
+      });
+      h+='</div></div>';
+    }
+  }
+
+  h+='<div class="wlcard"><h3>Weekly volume goal</h3><p>Optional — set a target to track progress against</p>';
+  h+='<div class="wgrid" style="grid-template-columns:1fr">';
+  h+='<div class="we"><label>Goal (lb)</label><div class="uwrap"><input type="number" inputmode="numeric" id="vol-goal-input" placeholder="e.g. 25000" value="'+(goal||'')+'" onchange="saveVolumeGoal()"><span class="uu">lb</span></div></div>';
+  h+='</div></div>';
+
+  document.getElementById('pg').innerHTML=h;
+}
+
+/* ── CUSTOM DRILL TEMPLATES (Mvmt Prep + Hitting) ── */
+var DRILL_CONTEXT=null;
+var DRILL_EDITING=null;
+var DRILL_DRAFT=[];
+
+function getDrillTemplates(ctx){
+  try{return JSON.parse(g('drill_tpl_'+ctx)||'[]');}catch(e){return [];}
+}
+function saveDrillTemplates(ctx,arr){s('drill_tpl_'+ctx,JSON.stringify(arr));}
+
+function drillModalOpen(ctx){
+  DRILL_CONTEXT=ctx;
+  document.getElementById('drill-modal-list-title').textContent=(ctx==='prep'?'Mvmt Prep':'Hitting')+' templates';
+  drillRenderList();
+  document.getElementById('drill-modal-list-view').style.display='block';
+  document.getElementById('drill-modal-edit-view').style.display='none';
+  document.getElementById('drill-modal-bg').classList.add('show');
+}
+function drillModalClose(){
+  document.getElementById('drill-modal-bg').classList.remove('show');
+  if(DRILL_CONTEXT==='prep')rprep();
+  else if(DRILL_CONTEXT==='hit')rhit();
+}
+
+function drillRenderList(){
+  var tpls=getDrillTemplates(DRILL_CONTEXT);
+  var h='';
+  if(!tpls.length){
+    h+='<div class="tpl-empty">No custom templates yet — create one above.</div>';
+  } else {
+    tpls.forEach(function(t){
+      h+='<div class="drill-list-row">';
+      h+='<div><div class="drill-list-name">'+t.name+'</div><div class="drill-list-sub">'+t.drills.length+' drill'+(t.drills.length===1?'':'s')+'</div></div>';
+      h+='<div class="drill-list-actions">';
+      h+='<button class="drill-list-btn" onclick="drillOpenEdit(\''+t.id+'\')">Edit</button>';
+      h+='<button class="drill-list-btn danger" onclick="if(confirm(\'Delete '+t.name.replace(/'/g,"\\'")+'?\'))drillDelete(\''+t.id+'\')">Delete</button>';
+      h+='</div></div>';
+    });
+  }
+  document.getElementById('drill-list-content').innerHTML=h;
+}
+
+function drillOpenNew(){
+  DRILL_EDITING=null;
+  DRILL_DRAFT=[{n:'',s:'',note:''}];
+  document.getElementById('drill-modal-edit-title').textContent='New template';
+  document.getElementById('drill-name-input').value='';
+  drillRenderDraft();
+  document.getElementById('drill-modal-list-view').style.display='none';
+  document.getElementById('drill-modal-edit-view').style.display='block';
+}
+
+function drillOpenEdit(tplId){
+  var tpls=getDrillTemplates(DRILL_CONTEXT);
+  var tpl=tpls.find(function(t){return t.id===tplId;});
+  if(!tpl)return;
+  DRILL_EDITING=tplId;
+  DRILL_DRAFT=tpl.drills.map(function(d){return Object.assign({},d);});
+  document.getElementById('drill-modal-edit-title').textContent='Edit template';
+  document.getElementById('drill-name-input').value=tpl.name;
+  drillRenderDraft();
+  document.getElementById('drill-modal-list-view').style.display='none';
+  document.getElementById('drill-modal-edit-view').style.display='block';
+}
+
+function drillBackToList(){
+  drillRenderList();
+  document.getElementById('drill-modal-list-view').style.display='block';
+  document.getElementById('drill-modal-edit-view').style.display='none';
+}
+
+function drillAddDraftRow(){
+  DRILL_DRAFT.push({n:'',s:'',note:''});
+  drillRenderDraft();
+}
+function drillUpdateDraftField(idx,field,val){
+  DRILL_DRAFT[idx][field]=val;
+}
+function drillRemoveDraftRow(idx){
+  DRILL_DRAFT.splice(idx,1);
+  if(!DRILL_DRAFT.length)DRILL_DRAFT.push({n:'',s:'',note:''});
+  drillRenderDraft();
+}
+
+function drillRenderDraft(){
+  var h='';
+  DRILL_DRAFT.forEach(function(d,idx){
+    h+='<div class="drill-row">';
+    h+='<input type="text" class="drill-name" placeholder="Drill name" value="'+(d.n||'').replace(/"/g,'&quot;')+'" oninput="drillUpdateDraftField('+idx+',\'n\',this.value)">';
+    h+='<input type="text" class="drill-sets" placeholder="Sets/reps" value="'+(d.s||'').replace(/"/g,'&quot;')+'" oninput="drillUpdateDraftField('+idx+',\'s\',this.value)">';
+    h+='</div>';
+    h+='<div class="drill-row" style="margin-top:-4px">';
+    h+='<input type="text" class="drill-note" placeholder="Coaching note (optional)" value="'+(d.note||'').replace(/"/g,'&quot;')+'" oninput="drillUpdateDraftField('+idx+',\'note\',this.value)">';
+    h+='<button class="drill-del" onclick="drillRemoveDraftRow('+idx+')">✕</button>';
+    h+='</div>';
+  });
+  h+='<button onclick="drillAddDraftRow()" style="width:100%;font-size:12px;font-weight:700;color:#5fa0e8;background:none;border:1px dashed #1a5fa8;border-radius:9px;padding:9px;cursor:pointer;margin:4px 0 8px">+ Add drill</button>';
+  h+='<button onclick="drillBackToList()" style="width:100%;font-size:12px;font-weight:600;color:#888;background:none;border:none;cursor:pointer;padding:4px 0">← Back to list</button>';
+  document.getElementById('drill-draft-list').innerHTML=h;
+}
+
+function drillSave(){
+  var name=document.getElementById('drill-name-input').value.trim();
+  if(!name)return;
+  var drills=DRILL_DRAFT.filter(function(d){return d.n&&d.n.trim();});
+  if(!drills.length)return;
+  var tpls=getDrillTemplates(DRILL_CONTEXT);
+  if(DRILL_EDITING){
+    var tpl=tpls.find(function(t){return t.id===DRILL_EDITING;});
+    if(tpl){tpl.name=name;tpl.drills=drills;}
+  } else {
+    tpls.push({id:'dt_'+Date.now(),name:name,drills:drills,created:Date.now()});
+  }
+  saveDrillTemplates(DRILL_CONTEXT,tpls);
+  drillBackToList();
+}
+
+function drillDelete(tplId){
+  var tpls=getDrillTemplates(DRILL_CONTEXT).filter(function(t){return t.id!==tplId;});
+  saveDrillTemplates(DRILL_CONTEXT,tpls);
+  var selKey='custom:'+tplId;
+  if(DRILL_CONTEXT==='prep'&&PREPSEL===selKey){PREPSEL=null;s('prep_sel','');}
+  if(DRILL_CONTEXT==='hit'&&HITSEL===selKey){HITSEL=null;s('hit_sel','');}
+  drillRenderList();
+}
+
 function rstrip(){
   var h='';
   for(var i=0;i<6;i++)h+='<button class="wb'+(i===C?' on':'')+'" onclick="gt('+i+')">Week '+(i+1)+'</button>';
@@ -1397,10 +1763,18 @@ function rstrip(){
 }
 function sv(v){
   V=v;
-  ['s','tpl','m','meal','w','e','l'].forEach(function(n){var e=document.getElementById('vt-'+n);if(e)e.className='vt'+(n===v?' on':'');});
+  ['s','tpl','vol','m','prep','hit','meal','w','e','l'].forEach(function(n){var e=document.getElementById('vt-'+n);if(e)e.className='vt'+(n===v?' on':'');});
   document.getElementById('wstrip-wrap').style.display=v==='s'?'block':'none';
   if(v==='l'){openLI();return;}
-  if(v==='s')rs();else if(v==='tpl')rtpl();else if(v==='m')rm();else if(v==='meal')rmeal();else if(v==='w')rw();else rev();
+  if(v==='s')rs();
+  else if(v==='tpl')rtpl();
+  else if(v==='vol')rvol();
+  else if(v==='m')rm();
+  else if(v==='prep')rprep();
+  else if(v==='hit')rhit();
+  else if(v==='meal')rmeal();
+  else if(v==='w')rw();
+  else rev();
 }
 function gt(i){C=i;rstrip();rs();}
 function setwd(d){WD=d;rs();}
@@ -1414,7 +1788,7 @@ function openLI(){
 function closeLI(){
   document.getElementById('li-screen').classList.remove('show');
   V='s';
-  ['s','tpl','m','meal','w','e','l'].forEach(function(n){var e=document.getElementById('vt-'+n);if(e)e.className='vt'+(n==='s'?' on':'');});
+  ['s','tpl','vol','m','prep','hit','meal','w','e','l'].forEach(function(n){var e=document.getElementById('vt-'+n);if(e)e.className='vt'+(n==='s'?' on':'');});
   rs();
 }
 
@@ -1689,6 +2063,29 @@ rstrip();rs();
       <div id="tpl-draft-list"></div>
     </div>
     <button class="tpl-modal-save" onclick="tplSave()">Save template</button>
+  </div>
+</div>
+
+<!-- DRILL TEMPLATE MANAGE/EDIT MODAL -->
+<div class="tpl-modal-bg" id="drill-modal-bg">
+  <div class="tpl-modal">
+    <div id="drill-modal-list-view">
+      <div class="tpl-modal-hdr"><span id="drill-modal-list-title">Your templates</span><button class="tpl-modal-close" onclick="drillModalClose()">✕</button></div>
+      <button class="lift-save-btn" onclick="drillOpenNew()" style="margin-bottom:14px">+ New custom template</button>
+      <div id="drill-list-content"></div>
+    </div>
+    <div id="drill-modal-edit-view" style="display:none">
+      <div class="tpl-modal-hdr"><span id="drill-modal-edit-title">New template</span><button class="tpl-modal-close" onclick="drillModalClose()">✕</button></div>
+      <div class="tpl-modal-field">
+        <label>Template name</label>
+        <input type="text" id="drill-name-input" placeholder="e.g. Heavy bag day, Pre-game routine">
+      </div>
+      <div class="tpl-modal-field">
+        <label>Drills</label>
+        <div id="drill-draft-list"></div>
+      </div>
+      <button class="tpl-modal-save" onclick="drillSave()">Save template</button>
+    </div>
   </div>
 </div>
 </div>
